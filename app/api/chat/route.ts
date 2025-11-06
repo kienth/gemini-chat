@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest) {
   try {
-    const { message } = await request.json();
+    const { message, image } = await request.json();
 
     const apiKey = process.env.GOOGLE_API_KEY;
-    const model = process.env.GOOGLE_MODEL || "gemini-2.5-flash";
+    const model = process.env.GOOGLE_MODEL || "gemini-1.5-flash";
 
     if (!apiKey) {
       return NextResponse.json(
@@ -14,11 +14,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!message) {
+    if (!message && !image) {
       return NextResponse.json(
-        { error: "Message is required" },
+        { error: "Message or image is required" },
         { status: 400 }
       );
+    }
+
+    // Prepare the content parts
+    const parts: any[] = [];
+
+    if (message) {
+      parts.push({ text: message });
+    }
+
+    if (image) {
+      // Convert base64 image to the format Gemini expects
+      const base64Data = image.split(",")[1]; // Remove data:image/...;base64, prefix
+      const mimeType = image.split(",")[0].split(":")[1].split(";")[0]; // Extract mime type
+
+      parts.push({
+        inline_data: {
+          mime_type: mimeType,
+          data: base64Data,
+        },
+      });
     }
 
     // Call Google Gemini API
@@ -32,11 +52,7 @@ export async function POST(request: NextRequest) {
         body: JSON.stringify({
           contents: [
             {
-              parts: [
-                {
-                  text: message,
-                },
-              ],
+              parts: parts,
             },
           ],
           generationConfig: {
@@ -46,6 +62,7 @@ export async function POST(request: NextRequest) {
         }),
       }
     );
+
     if (!response.ok) {
       const errorText = await response.text();
       return NextResponse.json(
