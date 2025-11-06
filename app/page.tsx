@@ -4,6 +4,8 @@ import { useState, useRef } from "react";
 import Image from "next/image";
 import Message, { MessageType } from "./components/Message";
 import { compressImage, validateImageFile } from "./utils/imageUtils";
+import { preprocessLongText, getTextStatistics } from "./utils/textUtils";
+import { convertMessagesToHistory } from "./utils/conversationUtils";
 
 export default function Home() {
   const [messages, setMessages] = useState<MessageType[]>([]);
@@ -66,14 +68,21 @@ export default function Home() {
     setError(null);
 
     try {
+      // Preprocess long text for better AI understanding
+      const processedText = preprocessLongText(messageText);
+
+      // Convert current messages to conversation history format
+      const conversationHistory = convertMessagesToHistory(messages);
+
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          message: messageText,
+          message: processedText,
           image: imageData,
+          conversationHistory: conversationHistory,
         }),
       });
 
@@ -107,6 +116,12 @@ export default function Home() {
     }
   };
 
+  const clearConversation = () => {
+    setMessages([]);
+    setLastUserMessage(null);
+    setError(null);
+  };
+
   async function sendMessage() {
     if (!input.trim() && !selectedImage) return;
 
@@ -137,12 +152,31 @@ export default function Home() {
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Header */}
       <div className="bg-white shadow-sm border-b border-gray-200 p-4">
-        <h1 className="text-2xl font-semibold text-gray-800 text-center">
-          Gemini AI Chat
-        </h1>
-        <p className="text-center text-gray-600 text-sm mt-1">
-          Chat with AI using text and images
-        </p>
+        <div className="flex items-center justify-between">
+          <div className="flex-1">
+            <h1 className="text-2xl font-semibold text-gray-800 text-center">
+              Gemini AI Chat
+            </h1>
+            <p className="text-center text-gray-600 text-sm mt-1">
+              Chat with AI using text and images • Conversation context
+              maintained
+            </p>
+          </div>
+          {messages.length > 0 && (
+            <div className="flex items-center space-x-2">
+              <div className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                {messages.length} messages
+              </div>
+              <button
+                onClick={clearConversation}
+                className="text-xs bg-red-100 hover:bg-red-200 text-red-600 px-3 py-1 rounded transition-colors"
+                title="Clear conversation history"
+              >
+                Clear Chat
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Error Banner */}
@@ -164,11 +198,13 @@ export default function Home() {
           <div className="text-center text-gray-500 mt-20">
             <div className="text-6xl mb-4">🤖</div>
             <h2 className="text-xl font-medium mb-2">Welcome to Gemini AI</h2>
-            <p>Send a message or upload an image to get started</p>
+            <p className="mb-4">
+              Send a message or upload an image to get started
+            </p>
             <div className="mt-6 flex justify-center space-x-4 text-sm text-gray-400">
               <div className="flex items-center space-x-1">
                 <span>💬</span>
-                <span>Text messages</span>
+                <span>Contextual conversations</span>
               </div>
               <div className="flex items-center space-x-1">
                 <span>🖼️</span>
@@ -176,8 +212,12 @@ export default function Home() {
               </div>
               <div className="flex items-center space-x-1">
                 <span>🧠</span>
-                <span>AI conversations</span>
+                <span>Remembers chat history</span>
               </div>
+            </div>
+            <div className="mt-4 text-xs text-gray-400 max-w-md mx-auto">
+              Your conversation history is preserved for context. The AI will
+              remember previous messages and can reference them in responses.
             </div>
           </div>
         ) : (
@@ -275,6 +315,27 @@ export default function Home() {
                 rows={1}
               />
             </div>
+
+            {/* Text Statistics */}
+            {input && (
+              <div className="mt-2 text-xs text-gray-500">
+                {(() => {
+                  const stats = getTextStatistics(input);
+                  return (
+                    <div className="flex items-center space-x-4">
+                      <span>{stats.characters} characters</span>
+                      <span>{stats.words} words</span>
+                      {stats.isLong && (
+                        <span className="text-blue-600 font-medium">
+                          ✨ Long text detected - AI will auto-format for better
+                          analysis
+                        </span>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
           </div>
           <button
             onClick={sendMessage}
@@ -308,7 +369,31 @@ export default function Home() {
         </div>
 
         <div className="flex items-center justify-between text-xs text-gray-500 mt-2">
-          <div>Supports JPEG, PNG, GIF, WebP images up to 10MB</div>
+          <div className="flex items-center space-x-4">
+            <span>Supports JPEG, PNG, GIF, WebP images up to 10MB</span>
+            {messages.length > 0 && (
+              <div className="flex items-center space-x-1 text-green-600">
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+                  <path d="m2 17 10 5 10-5"></path>
+                  <path d="m2 12 10 5 10-5"></path>
+                </svg>
+                <span>
+                  Context preserved ({convertMessagesToHistory(messages).length}{" "}
+                  exchanges)
+                </span>
+              </div>
+            )}
+          </div>
           {lastUserMessage && (
             <button
               onClick={() => handleResend(lastUserMessage)}
