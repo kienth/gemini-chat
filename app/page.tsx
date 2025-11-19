@@ -155,7 +155,7 @@ export default function Home() {
         <div className="flex items-center justify-between">
           <div className="flex-1">
             <h1 className="text-2xl font-semibold text-gray-800 text-center">
-              Gemini AI Chat
+              Kentoy AI Chat
             </h1>
             <p className="text-center text-gray-600 text-sm mt-1">
               Chat with AI using text and images • Conversation context
@@ -196,8 +196,16 @@ export default function Home() {
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.length === 0 ? (
           <div className="text-center text-gray-500 mt-20">
-            <div className="text-6xl mb-4">🤖</div>
-            <h2 className="text-xl font-medium mb-2">Welcome to Gemini AI</h2>
+            <div className="mb-4 flex justify-center">
+              <Image
+                src="/kentoy-ai.png"
+                alt="Kentoy AI"
+                width={96}
+                height={96}
+                className="rounded-full"
+              />
+            </div>
+            <h2 className="text-xl font-medium mb-2">Welcome to Kentoy AI</h2>
             <p className="mb-4">
               Send a message or upload an image to get started
             </p>

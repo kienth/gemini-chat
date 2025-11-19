@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Gemini Chat",
+  title: "Kentoy Chat",
   description: "A chat application powered by Google Gemini AI",
 };
 
