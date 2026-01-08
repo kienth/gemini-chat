@@ -8,14 +8,21 @@ export type MessageType = {
   timestamp: Date;
   isError?: boolean;
   canResend?: boolean;
+  canFallbackToBotLibre?: boolean;
+  fallbackQuery?: string;
 };
 
 interface MessageProps {
   message: MessageType;
   onResend?: (message: MessageType) => void;
+  onFallbackToBotLibre?: (message: MessageType) => void;
 }
 
-export default function Message({ message, onResend }: MessageProps) {
+export default function Message({
+  message,
+  onResend,
+  onFallbackToBotLibre,
+}: MessageProps) {
   const formatTime = (date: Date) => {
     return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   };
@@ -27,11 +34,11 @@ export default function Message({ message, onResend }: MessageProps) {
       }`}
     >
       <div
-        className={`max-w-[70%] rounded-lg p-4 ${
+        className={`max-w-[90%] sm:max-w-[70%] rounded-lg p-3 sm:p-4 ${
           message.role === "user"
             ? "bg-blue-500 text-white"
             : message.isError
-            ? "bg-red-50 text-red-800 shadow-sm border border-red-200"
+            ? "bg-red-50 text-red-900 shadow-sm border border-red-200 border-l-4 border-l-red-400"
             : "bg-white text-gray-800 shadow-sm border border-gray-200"
         }`}
       >
@@ -59,7 +66,7 @@ export default function Message({ message, onResend }: MessageProps) {
                   alt="Uploaded image"
                   width={200}
                   height={200}
-                  className="rounded-lg object-cover max-w-full h-auto"
+                  className="rounded-lg object-cover w-full max-w-[240px] h-auto"
                 />
               </div>
             )}
@@ -70,30 +77,61 @@ export default function Message({ message, onResend }: MessageProps) {
             )}
 
             {/* Resend button for failed messages */}
-            {message.isError && message.canResend && onResend && (
-              <div className="mt-3">
-                <button
-                  onClick={() => onResend(message)}
-                  className="inline-flex items-center px-3 py-1 text-xs bg-red-100 hover:bg-red-200 text-red-700 rounded-md transition-colors"
-                >
-                  <svg
-                    width="12"
-                    height="12"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="mr-1"
-                  >
-                    <polyline points="23 4 23 10 17 10"></polyline>
-                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
-                  </svg>
-                  Resend
-                </button>
-              </div>
-            )}
+            {message.isError &&
+              ((message.canResend && onResend) ||
+                (message.canFallbackToBotLibre && onFallbackToBotLibre)) && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {message.canResend && onResend && (
+                    <button
+                      onClick={() => onResend(message)}
+                      className="inline-flex items-center px-3 py-1 text-xs bg-white hover:bg-red-50 text-red-700 border border-red-200 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-red-300"
+                    >
+                      <svg
+                        width="12"
+                        height="12"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="mr-1"
+                      >
+                        <polyline points="23 4 23 10 17 10"></polyline>
+                        <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                      </svg>
+                      Resend
+                    </button>
+                  )}
+
+                  {/* {message.canFallbackToBotLibre && onFallbackToBotLibre && (
+                    <button
+                      onClick={() => onFallbackToBotLibre(message)}
+                      className="inline-flex items-center px-3 py-1 text-xs bg-white hover:bg-gray-50 text-gray-800 border border-gray-200 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-gray-300"
+                      title="Open Bot Libre and copy your message"
+                    >
+                      <svg
+                        width="12"
+                        height="12"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="mr-1"
+                      >
+                        <path d="M14 3h7v7"></path>
+                        <path d="M10 14L21 3"></path>
+                        <path d="M21 14v7h-7"></path>
+                        <path d="M3 10V3h7"></path>
+                        <path d="M3 21l7-7"></path>
+                      </svg>
+                      Open Bot Libre
+                    </button>
+                  )} */}
+                </div>
+              )}
 
             <div className="flex items-center justify-between mt-2">
               <p

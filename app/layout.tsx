@@ -6,6 +6,12 @@ export const metadata: Metadata = {
   description: "A chat application powered by Google Gemini AI",
 };
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
+
 export default function RootLayout({
   children,
 }: {
