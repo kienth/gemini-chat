@@ -126,16 +126,57 @@ const fetchGeminiWithRetry = async (
   };
 };
 
+const parseGeminiError = (
+  errorText: string | null | undefined
+): { status?: string; message?: string } | null => {
+  if (!errorText) return null;
+
+  try {
+    const parsed = JSON.parse(errorText) as any;
+    const status = parsed?.error?.status;
+    const message = parsed?.error?.message;
+    if (typeof status === "string" || typeof message === "string") {
+      return {
+        status: typeof status === "string" ? status : undefined,
+        message: typeof message === "string" ? message : undefined,
+      };
+    }
+  } catch {
+    // ignore
+  }
+
+  return null;
+};
+
+const isLeakedKeyError = (opts: {
+  statusCode?: number;
+  errorText?: string | null;
+}): boolean => {
+  if (opts.statusCode !== 403) return false;
+  const parsed = parseGeminiError(opts.errorText);
+  const msg = (parsed?.message ?? opts.errorText ?? "").toLowerCase();
+  return (
+    msg.includes("reported as leaked") ||
+    msg.includes("api key was reported as leaked")
+  );
+};
+
 export async function POST(request: NextRequest) {
   try {
     const { message, image, conversationHistory = [] } = await request.json();
 
-    const apiKey = process.env.GOOGLE_API_KEY;
-    const model = process.env.GOOGLE_MODEL || "gemini-1.5-flash";
+    const apiKey = process.env.GEMINI_API_KEY ?? process.env.GOOGLE_API_KEY;
+    const model =
+      process.env.GEMINI_MODEL ??
+      process.env.GOOGLE_MODEL ??
+      "gemini-1.5-flash";
 
     if (!apiKey) {
       return NextResponse.json(
-        { error: "Missing GOOGLE_API_KEY in environment variables" },
+        {
+          error:
+            "Missing GEMINI_API_KEY in environment variables (or legacy GOOGLE_API_KEY).",
+        },
         { status: 500 }
       );
     }
@@ -227,6 +268,17 @@ export async function POST(request: NextRequest) {
 
     if (!response || !response.ok) {
       const status = response?.status ?? 502;
+
+      if (isLeakedKeyError({ statusCode: status, errorText })) {
+        return NextResponse.json(
+          {
+            error:
+              "Gemini API key was revoked (reported as leaked). Create a new key and set GEMINI_API_KEY in .env.local, then restart the server.",
+          },
+          { status: 403 }
+        );
+      }
+
       return NextResponse.json(
         { error: `Gemini API error: ${errorText ?? "Unknown error"}` },
         { status }
@@ -247,7 +299,6 @@ export async function POST(request: NextRequest) {
     }
 
     const candidate = data.candidates[0];
-    console.log(`text: ${candidate.content.parts[0].text}`);
     if (
       !candidate.content ||
       !candidate.content.parts ||

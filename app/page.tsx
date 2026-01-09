@@ -46,6 +46,22 @@ export default function Home() {
   }): string => {
     const status = opts.status;
 
+    // Auth / configuration issues (common during setup).
+    if (status === 401 || status === 403) {
+      const raw =
+        typeof opts.serverError === "string"
+          ? opts.serverError.toLowerCase()
+          : "";
+      if (
+        raw.includes("reported as leaked") ||
+        raw.includes("api key") ||
+        raw.includes("permission_denied")
+      ) {
+        return "Server configuration error: the Gemini API key is invalid/revoked. Replace it (GEMINI_API_KEY) and restart the server.";
+      }
+      return "Server configuration error: Gemini API access was denied. Check your API key and restart the server.";
+    }
+
     if (isQuotaExceeded({ status, serverError: opts.serverError })) {
       return "You reached the Gemini free-tier limit. You can resend later.";
     }
